@@ -40,25 +40,25 @@ public class GameServer extends WebSocketServer {
     public void onMessage(WebSocket ws, String msg) {
         Player p = players.get(ws);
         if (p == null) return;
-        if (p.state == Player.NONE) {
+        if (p.state == Player.S_NONE) {
             if (msg.equals("request_to_play")) {
                 noneStatePlayers.remove(p);
                 if (waitingPlayers.isEmpty()) {                
                     waitingPlayers.add(p);
-                    p.state = Player.WAITING_FOR_OPP;
+                    p.state = Player.S_WAITING_FOR_OPP;
                 } else {
                     Iterator<Player> it = waitingPlayers.iterator();
                     Player opp = it.next();
                     it.remove();
-                    p.state = Player.IN_BATTLE;
-                    opp.state = Player.IN_BATTLE;
+                    p.state = Player.S_IN_BATTLE;
+                    opp.state = Player.S_IN_BATTLE;
                     p.opp = opp;
                     opp.opp = p;
                     p.socket.send("opp_found");
                     opp.socket.send("opp_found");
                 }
             }
-        } else if (p.state == Player.IN_BATTLE) {
+        } else if (p.state == Player.S_IN_BATTLE) {
             if (msg.startsWith("ships_arrangement")) {
                 p.ready = true;
                 p.numAliveCells = 20;
@@ -83,20 +83,26 @@ public class GameServer extends WebSocketServer {
                     int[][] ships = p.opp.ships;
                     String[] split = msg.split(" ");
                     int x = Integer.parseInt(split[1]), y = Integer.parseInt(split[2]);
-                    if (ships[y][x] == Player.CELL_SHOOTED) return;
+                    if ((ships[y][x] & Player.CELL_SHOOTED) != 0) return;
                     else {
-                        if (ships[y][x] == Player.CELL_SHIP) {
+                        ships[y][x] |= Player.CELL_SHOOTED;
+                        if ((ships[y][x] & Player.CELL_SHIP) != 0) {
                             p.opp.numAliveCells--;
-                            p.socket.send("hit");
-                            p.opp.socket.send("hit_at " + x + " " + y);
+                            if (sunk(x, y, ships)) {
+                                p.socket.send("sunk");
+                                p.opp.socket.send("sunk_at " + x + " " + y);
+                            } else {
+                                p.socket.send("hit");
+                                p.opp.socket.send("hit_at " + x + " " + y);
+                            }
                             if (p.opp.numAliveCells == 0) {
                                 p.socket.send("win");
                                 p.opp.socket.send("loss");
                                 p.ready = p.opp.ready = false;
                                 p.turns = p.opp.turns = false;
                                 p.ships = p.opp.ships = null;
-                                p.numAliveCells = p.opp.numAliveCells = 0;
-                                p.state = p.opp.state = Player.NONE;
+                                p.numAliveCells = 0;
+                                p.state = p.opp.state = Player.S_NONE;
                                 noneStatePlayers.add(p);
                                 noneStatePlayers.add(p.opp);                                
                                 p.opp = p.opp.opp = null;
@@ -107,7 +113,7 @@ public class GameServer extends WebSocketServer {
                             p.socket.send("miss");
                             p.opp.socket.send("miss_at " + x + " " + y);
                         }
-                        ships[y][x] = Player.CELL_SHOOTED;
+                        
                     }
                 }
             }
@@ -132,7 +138,7 @@ public class GameServer extends WebSocketServer {
             players.remove(ws);
             noneStatePlayers.remove(p);
             waitingPlayers.remove(p);
-            if (p.state == Player.IN_BATTLE) {
+            if (p.state == Player.S_IN_BATTLE) {
                 Player opp = p.opp;
                 if (opp != null) {
                     opp.opp = null;
@@ -140,7 +146,7 @@ public class GameServer extends WebSocketServer {
                     opp.turns = false;
                     opp.ready = false;
                     opp.ships = null;
-                    opp.state = Player.NONE;
+                    opp.state = Player.S_NONE;
                     noneStatePlayers.add(opp);
                     opp.socket.send("opp_leaved");
                 }
@@ -151,6 +157,19 @@ public class GameServer extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("Game server starts...");
+    }
+    
+    private static boolean sunk(int x, int y, int[][] ships) {
+        if ((ships[y][x] & Player.CELL_NONE) != 0) return true;
+        if ((ships[y][x] & Player.CELL_SHOOTED) == 0) return false;
+        
+        if (x - 1 >= 0 && !sunk(x - 1, y, ships)) return false;
+        if (x + 1 <= 10 && !sunk(x + 1, y, ships)) return false;
+        if (y - 1 >= 0 && !sunk(x, y - 1, ships)) return false;
+        if (y + 1 <= 10 && !sunk(x, y + 1, ships)) return false;
+        
+        return true;
+        
     }
     
 }

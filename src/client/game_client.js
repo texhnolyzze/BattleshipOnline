@@ -32,18 +32,18 @@ var player_ships, opp_ships;
 var GAME_NAME_X = CENTER_X, GAME_NAME_Y = CENTER_Y / 3;
 var game_name_y = 0;
 
-var INVITATION_LABEL_COLORS = new Array(50);
+var COLORS = new Array(50);
 
-var invitation_label_color_idx = INVITATION_LABEL_COLORS.length - 1;
-var invitation_label_color_idx_increment = false;
-var invitation_label_color_change_timer = Date.now();
+var color_idx = COLORS.length - 1;
+var color_idx_increment = false;
+var color_change_timer = Date.now();
 
 var color = 1; //rgb(255, 255, 255)
-INVITATION_LABEL_COLORS[0] = '#ffffff';
-for (var i = 1; i < INVITATION_LABEL_COLORS.length; i++) {
+COLORS[0] = '#ffffff';
+for (var i = 1; i < COLORS.length; i++) {
     color = color * 0.95;
     color_hex = Math.round(255 * color).toString(16);
-    INVITATION_LABEL_COLORS[i] = '#' + color_hex + color_hex + color_hex;
+    COLORS[i] = '#' + color_hex + color_hex + color_hex;
 }
 
 var DOTS = ['.', '..', '...'];
@@ -73,68 +73,77 @@ for (var i = 0; i < opp_ships.length; i++) {
 }
 
 var player_turns;
-var prev_shot = {x: -1, y: -1};
+var prev_shot;
+var prev_event;
 
 function Update() {
     CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-    if (state === S_PRESS_TO_PLAY) {
-        CTX.textAlign = 'center';
-        CTX.fillStyle = '#00B2B2';
-        CTX.font = '250% ' + FONT_FAMILY;
-        CTX.fillText('BATTLESHIP', GAME_NAME_X, game_name_y);
-        game_name_y = Math.min(game_name_y + 1, GAME_NAME_Y);
-        if (game_name_y === GAME_NAME_Y) {
-            CTX.fillStyle = INVITATION_LABEL_COLORS[invitation_label_color_idx];
-            CTX.font = '100% ' + FONT_FAMILY;
-            CTX.fillText('PRESS TO CONNECT THE SERVER AND FIND THE OPPONENT', CENTER_X, CENTER_Y);
-            if (Date.now() - invitation_label_color_change_timer >= 25) {
-                invitation_label_color_change_timer = Date.now();
-                if (invitation_label_color_idx_increment) {
-                    invitation_label_color_idx++;
-                    if (invitation_label_color_idx === INVITATION_LABEL_COLORS.length - 1) 
-                        invitation_label_color_idx_increment = false;
-                } else {
-                    invitation_label_color_idx--;
-                    if (invitation_label_color_idx === 0) 
-                        invitation_label_color_idx_increment = true;
+    switch (state) {
+        case S_PRESS_TO_PLAY:
+            CTX.textAlign = 'center';
+            CTX.fillStyle = '#00B2B2';
+            CTX.font = '250% ' + FONT_FAMILY;
+            CTX.fillText('BATTLESHIP', GAME_NAME_X, game_name_y);
+            game_name_y = Math.min(game_name_y + 1, GAME_NAME_Y);
+            if (game_name_y === GAME_NAME_Y) {
+                CTX.fillStyle = COLORS[color_idx];
+                CTX.font = '100% ' + FONT_FAMILY;
+                CTX.fillText('PRESS TO CONNECT THE SERVER AND FIND THE OPPONENT', CENTER_X, CENTER_Y);
+                if (Date.now() - color_change_timer >= 25) {
+                    color_change_timer = Date.now();
+                    if (color_idx_increment) {
+                        color_idx++;
+                        if (color_idx === COLORS.length - 1) 
+                            color_idx_increment = false;
+                    } else {
+                        color_idx--;
+                        if (color_idx === 0) 
+                            color_idx_increment = true;
+                    }
                 }
             }
-        }
-    } else if (state === S_CONNECTING || state === S_SEARCHING_OPPONENT) {
-        var text = state === S_CONNECTING ? 'CONNECTING' : 'SEARCHING FOR OPPONENT';
-        CTX.fillStyle = '#ffffff';
-        CTX.font = '150% ' + FONT_FAMILY;
-        CTX.textAlign = 'center';
-        CTX.fillText(text, CENTER_X, CENTER_Y);
-        CTX.fillText(DOTS[dots_idx], CENTER_X, CENTER_Y + CELL_SIZE);
-        AnimateDots();
-    } else if (state === S_SHIPS_ARRANGEMENT) {
-        ShipsArrangement();
-        CTX.textAlign = 'center';
-        CTX.font = CELL_SIZE / 2 + 'px ' + FONT_FAMILY;
-        CTX.fillText('PRESS 1 2 3 OR 4 TO SELECT', CENTER_X, CENTER_Y + 3.5 * CELL_SIZE);
-        CTX.fillText('ONE, TWO, THREE OR FOUR-DECK SHIP RESPECTIVELY', CENTER_X, CENTER_Y + 4.5 * CELL_SIZE);
-        CTX.fillText('YOU HAVE:', CENTER_X, CENTER_Y + 5.5 * CELL_SIZE);
-        CTX.fillText('*: ' + ships_remain[0] + 'X', CENTER_X, CENTER_Y + 6.5 * CELL_SIZE);
-        CTX.fillText('**: ' + ships_remain[1] + 'X', CENTER_X, CENTER_Y + 7.5 * CELL_SIZE);
-        CTX.fillText('***: ' + ships_remain[2] + 'X', CENTER_X, CENTER_Y + 8.5 * CELL_SIZE);
-        CTX.fillText('****: ' + ships_remain[3] + 'X', CENTER_X, CENTER_Y + 9.5 * CELL_SIZE);
-    } else if (state === S_WAITING_OPPONENT) {
-        ShipsArrangement();
-        CTX.textAlign = 'center';
-        CTX.font = CELL_SIZE + 'px ' + FONT_FAMILY;
-        CTX.fillStyle = '#ffffff';
-        CTX.fillText('WAITING FOR THE OPPONENT', CENTER_X, CENTER_Y + 5 * CELL_SIZE);
-        CTX.fillText(DOTS[dots_idx], CENTER_X, CENTER_Y + 6 * CELL_SIZE);
-        AnimateDots();
-    } else if (state === S_OPP_LEAVED) {
-        CTX.textAlign = 'center';
-        CTX.fillStyle = '#ff0000';
-        CTX.font = CELL_SIZE + 'px ' + FONT_FAMILY; 
-        CTX.fillText('OPPONENT LEAVED', CENTER_X, CENTER_Y);
-        CTX.font = CELL_SIZE / 2 + 'px ' + FONT_FAMILY; 
-        CTX.fillStyle = '#ffffff';
-        CTX.fillText('PRESS ANY KEY TO FIND NEW OPPONENT', CENTER_X, CENTER_Y + CELL_SIZE);        
+            break;
+        case S_CONNECTING:
+        case S_SEARCHING_OPPONENT:
+            var text = state === S_CONNECTING ? 'CONNECTING' : 'SEARCHING FOR OPPONENT';
+            CTX.fillStyle = '#ffffff';
+            CTX.font = '150% ' + FONT_FAMILY;
+            CTX.textAlign = 'center';
+            CTX.fillText(text, CENTER_X, CENTER_Y);
+            CTX.fillText(DOTS[dots_idx], CENTER_X, CENTER_Y + CELL_SIZE);
+            AnimateDots();
+            break;
+        case S_SHIPS_ARRANGEMENT:
+            ShipsArrangement();
+            CTX.textAlign = 'center';
+            CTX.font = CELL_SIZE / 2 + 'px ' + FONT_FAMILY;
+            CTX.fillText('PRESS 1 2 3 OR 4 TO SELECT', CENTER_X, CENTER_Y + 3.5 * CELL_SIZE);
+            CTX.fillText('ONE, TWO, THREE OR FOUR-DECK SHIP RESPECTIVELY', CENTER_X, CENTER_Y + 4.5 * CELL_SIZE);
+            CTX.fillText('YOU HAVE:', CENTER_X, CENTER_Y + 5.5 * CELL_SIZE);
+            CTX.fillText('*: ' + ships_remain[0] + 'X', CENTER_X, CENTER_Y + 6.5 * CELL_SIZE);
+            CTX.fillText('**: ' + ships_remain[1] + 'X', CENTER_X, CENTER_Y + 7.5 * CELL_SIZE);
+            CTX.fillText('***: ' + ships_remain[2] + 'X', CENTER_X, CENTER_Y + 8.5 * CELL_SIZE);
+            CTX.fillText('****: ' + ships_remain[3] + 'X', CENTER_X, CENTER_Y + 9.5 * CELL_SIZE);
+            break;
+        case S_WAITING_OPPONENT:
+            ShipsArrangement();
+            CTX.textAlign = 'center';
+            CTX.font = CELL_SIZE + 'px ' + FONT_FAMILY;
+            CTX.fillStyle = '#ffffff';
+            CTX.fillText('WAITING FOR THE OPPONENT', CENTER_X, CENTER_Y + 5 * CELL_SIZE);
+            CTX.fillText(DOTS[dots_idx], CENTER_X, CENTER_Y + 6 * CELL_SIZE);
+            AnimateDots();
+            break;
+        case S_OPP_LEAVED:
+            CTX.textAlign = 'center';
+            CTX.fillStyle = '#ff0000';
+            CTX.font = CELL_SIZE + 'px ' + FONT_FAMILY; 
+            CTX.fillText('OPPONENT LEAVED', CENTER_X, CENTER_Y);
+            CTX.font = CELL_SIZE / 2 + 'px ' + FONT_FAMILY; 
+            CTX.fillStyle = '#ffffff';
+            CTX.fillText('PRESS ANY KEY TO FIND NEW OPPONENT', CENTER_X, CENTER_Y + CELL_SIZE);
+            break;
+        
     }
 }
 
@@ -222,161 +231,210 @@ function DrawLine(x1, y1, x2, y2) {
     CTX.stroke();
 }
 
+function PlaySound(sound) {
+    
+}
+
 window.onkeyup = function(event) {
-    if (state === S_PRESS_TO_PLAY) {
-        if (game_name_y === GAME_NAME_Y) {
-            state = S_CONNECTING;
-            dots_idx = 0;
-            dots_timer = Date.now();
-            socket = new WebSocket('ws:127.0.0.1:8081');
-            socket.onopen = function() {
-                state = S_SEARCHING_OPPONENT;
-                socket.send('request_to_play');
-            };
-            socket.onerror = function(error) {
-                socket = null;
-                state = S_PROBLEMS;
-            };
-            socket.onclose = function(event) {
-                socket = null;
-                state = S_PROBLEMS;
-            };
-            socket.onmessage = onmessage;
-        }
-    } else if (state === S_SHIPS_ARRANGEMENT) {
-        if (event.keyCode >= 49 && event.keyCode <= 52) {
-            var s = event.keyCode - 49;
-            if (s === selected_ship) return;
-            if (ships_remain[s] > 0) {
-                for (var i = s + 1; i < TEMP_SHIP.length; i++) {
-                    TEMP_SHIP[i].x = -1;
-                    TEMP_SHIP[i].y = -1;
-                }
-                for (var i = 0; i < s + 1; i++) {
-                    TEMP_SHIP[i].x = i + 1;
-                    TEMP_SHIP[i].y = 1;
-                }
-                selected_ship = s;
-            } else beep.play();
-        } else if (event.keyCode >= 37 && event.keyCode <= 40) {
-            if (selected_ship !== -1) {
-                var head = TEMP_SHIP[0];
-                var tail = TEMP_SHIP[selected_ship];
-                var t_vec;
-                switch (event.keyCode) {
-                    case 37:
-                        t_vec = {x: -1, y: 0}; 
-                        break;
-                    case 38:
-                        t_vec = {x: 0, y: -1};
-                        break;
-                    case 39:
-                        t_vec = {x: 1, y: 0};
-                        break;
-                    case 40:
-                        t_vec = {x: 0, y: 1};
-                        break;
-                }
-                var head_x = head.x + t_vec.x;
-                var head_y = head.y + t_vec.y;
-                var tail_x = tail.x + t_vec.x;
-                var tail_y = tail.y + t_vec.y;
-                if (head_x >= 1 && head_x <= 10 && head_y >= 1 && head_y <= 10 && tail_x >= 1 && tail_x <= 10 && tail_y >= 1 && tail_y <= 10) {
-                    head.x = head_x;
-                    head.y = head_y;
-                    tail.x = tail_x;
-                    tail.y = tail_y;
-                    for (var i = 1; i < selected_ship; i++) {
-                        TEMP_SHIP[i].x += t_vec.x;
-                        TEMP_SHIP[i].y += t_vec.y;
-                    }
-                }
+    switch (state) {
+        case S_PRESS_TO_PLAY:
+            if (game_name_y === GAME_NAME_Y) {
+                state = S_CONNECTING;
+                dots_idx = 0;
+                dots_timer = Date.now();
+                socket = new WebSocket('ws:127.0.0.1:8081');
+                socket.onopen = function() {
+                    state = S_SEARCHING_OPPONENT;
+                    socket.send('request_to_play');
+                };
+                socket.onerror = function(error) {
+                    socket = null;
+                    state = S_PROBLEMS;
+                };
+                socket.onclose = function(event) {
+                    socket = null;
+                    state = S_PROBLEMS;
+                };
+                socket.onmessage = onmessage;
             }
-        } else if (event.keyCode === 32) {
-            if (selected_ship !== -1) {
-                var size = selected_ship + 1;
-                var temp = new Array(size);
-                temp[0] = TEMP_SHIP[0];
-                for (var i = 1; i < size; i++) {
-                    temp[i] = {x: -1, y: -1};
-                    var x = TEMP_SHIP[i].x;
-                    var y = TEMP_SHIP[i].y;
-                    temp[i].x = y - temp[0].y + temp[0].x;
-                    temp[i].y = -x + temp[0].x + temp[0].y;
-                    if (temp[i].x < 1 || temp[i].x > 10 || temp[i].y < 1 || temp[i].y > 10) {
-                        return;
-                    }
-                }
-                for (var i = 1; i < size; i++) TEMP_SHIP[i] = temp[i];
-            }
-        } else if (event.keyCode === 13) {
-            if (!ValidateShip(player_ships, TEMP_SHIP, selected_ship + 1)) {
-                beep.play();
-                return;
-            } else {
-                ships_remain[selected_ship]--;
-                ships_remain_total--;
-                for (var i = 0; i < selected_ship + 1; i++) {
-                    player_ships[TEMP_SHIP[i].y][TEMP_SHIP[i].x] = CELL_SHIP;
-                    TEMP_SHIP[i].x = -1;
-                    TEMP_SHIP[i].y = -1;
-                }
-                selected_ship = -1;
-                if (ships_remain_total === 0) {
-                    var msg = 'ships_arrangement';
-                    for (var y = 1; y < player_ships.length - 1; y++) {
-                        msg += '\n';
-                        for (var x = 1; x < player_ships.length - 1; x++) {
-                            msg += player_ships[y][x] === CELL_SHIP ? '1' : '0';
+            break;
+        case S_SHIPS_ARRANGEMENT:
+            switch (event.keyCode) {
+                case 49:
+                case 50:
+                case 51:
+                case 52:
+                    var s = event.keyCode - 49;
+                    if (s === selected_ship) return;
+                    if (ships_remain[s] > 0) {
+                        for (var i = s + 1; i < TEMP_SHIP.length; i++) {
+                            TEMP_SHIP[i].x = -1;
+                            TEMP_SHIP[i].y = -1;
+                        }
+                        for (var i = 0; i < s + 1; i++) {
+                            TEMP_SHIP[i].x = i + 1;
+                            TEMP_SHIP[i].y = 1;
+                        }
+                        selected_ship = s;
+                    } else beep.play();
+                    break;
+                case 37:
+                case 38:
+                case 39:
+                case 40:
+                    if (selected_ship !== -1) {
+                        var head = TEMP_SHIP[0];
+                        var tail = TEMP_SHIP[selected_ship];
+                        var t_vec;
+                        switch (event.keyCode) {
+                            case 37:
+                                t_vec = {x: -1, y: 0}; 
+                                break;
+                            case 38:
+                                t_vec = {x: 0, y: -1};
+                                break;
+                            case 39:
+                                t_vec = {x: 1, y: 0};
+                                break;
+                            case 40:
+                                t_vec = {x: 0, y: 1};
+                                break;
+                        }
+                        var head_x = head.x + t_vec.x;
+                        var head_y = head.y + t_vec.y;
+                        var tail_x = tail.x + t_vec.x;
+                        var tail_y = tail.y + t_vec.y;
+                        if (head_x >= 1 && head_x <= 10 && head_y >= 1 && head_y <= 10 && tail_x >= 1 && tail_x <= 10 && tail_y >= 1 && tail_y <= 10) {
+                            head.x = head_x;
+                            head.y = head_y;
+                            tail.x = tail_x;
+                            tail.y = tail_y;
+                            for (var i = 1; i < selected_ship; i++) {
+                                TEMP_SHIP[i].x += t_vec.x;
+                                TEMP_SHIP[i].y += t_vec.y;
+                            }
                         }
                     }
-                    socket.send(msg);
-                    state = S_WAITING_OPPONENT;
-                }
+                    break;
+                case 32:
+                    if (selected_ship !== -1) {
+                        var size = selected_ship + 1;
+                        var temp = new Array(size);
+                        temp[0] = TEMP_SHIP[0];
+                        for (var i = 1; i < size; i++) {
+                            temp[i] = {x: -1, y: -1};
+                            var x = TEMP_SHIP[i].x;
+                            var y = TEMP_SHIP[i].y;
+                            temp[i].x = y - temp[0].y + temp[0].x;
+                            temp[i].y = -x + temp[0].x + temp[0].y;
+                            if (temp[i].x < 1 || temp[i].x > 10 || temp[i].y < 1 || temp[i].y > 10) {
+                                return;
+                            }
+                        }
+                        for (var i = 1; i < size; i++) TEMP_SHIP[i] = temp[i];
+                    }
+                    break;
+                case 13:
+                    if (!ValidateShip(player_ships, TEMP_SHIP, selected_ship + 1)) {
+                        beep.play();
+                        return;
+                    } else {
+                        ships_remain[selected_ship]--;
+                        ships_remain_total--;
+                        for (var i = 0; i < selected_ship + 1; i++) {
+                            player_ships[TEMP_SHIP[i].y][TEMP_SHIP[i].x] = CELL_SHIP;
+                            TEMP_SHIP[i].x = -1;
+                            TEMP_SHIP[i].y = -1;
+                        }
+                        selected_ship = -1;
+                        if (ships_remain_total === 0) {
+                            var msg = 'ships_arrangement';
+                            for (var y = 1; y < player_ships.length - 1; y++) {
+                                msg += '\n';
+                                for (var x = 1; x < player_ships.length - 1; x++) {
+                                    msg += player_ships[y][x] === CELL_SHIP ? '1' : '0';
+                                }
+                            }
+                            socket.send(msg);
+                            state = S_WAITING_OPPONENT;
+                        }
+                    }
+                    break;
             }
-        }
-    } else if (state === S_OPP_LEAVED) {
-        state = S_SEARCHING_OPPONENT;
-        socket.send('request_to_play');
+            break;
+        case S_OPP_LEAVED:
+            state = S_SEARCHING_OPPONENT;
+            socket.send('request_to_play');
+            break;
     }
 };
 
 function onmessage(event) {
     var msg = event.data;
-    if (state === S_SEARCHING_OPPONENT) {
-        if (msg === 'opp_found') {
-            GRID_COORDS[0].x = CENTER_X - 5 * CELL_SIZE;
-            GRID_COORDS[0].y = CENTER_Y - 7.5 * CELL_SIZE;
-            state = S_SHIPS_ARRANGEMENT;
-            selected_ship = -1;
-            ships_remain[0] = 4;
-            ships_remain[1] = 3;
-            ships_remain[2] = 2;
-            ships_remain[3] = 1;
-            ships_remain_total = 10;
+    switch (state) {
+        case S_SEARCHING_OPPONENT:
+            if (msg === 'opp_found') {
+                GRID_COORDS[0].x = CENTER_X - 5 * CELL_SIZE;
+                GRID_COORDS[0].y = CENTER_Y - 7.5 * CELL_SIZE;
+                state = S_SHIPS_ARRANGEMENT;
+                selected_ship = -1;
+                ships_remain[0] = 4;
+                ships_remain[1] = 3;
+                ships_remain[2] = 2;
+                ships_remain[3] = 1;
+                ships_remain_total = 10;
+            }
+            break;
+        case S_SHIPS_ARRANGEMENT:
+            if (msg.startsWith('start')) {
+                state = S_BATTLE;
+                player_turns = msg.endsWith('+');
+                prev_shot = {x: -1, y: -1};
+            }            
+        case S_WAITING_OPPONENT:
+            if (msg === 'opp_leaved') state = S_OPP_LEAVED;
+            break;
+        case S_BATTLE:
+            switch (msg) {
+                case 'opp_leaved':
+                    state = S_OPP_LEAVED;
+                    break;
+                case 'sank':
+                case 'hit':
+                    prev_event = msg.toUpperCase();
+                    opp_ships[prev_shot.y][prev_shot.x] = CELL_SHIP | CELL_SHOOTED;
+                    PlaySound(msg);
+                    break;
+                case 'miss':
+                    prev_event = msg.toUpperCase();
+                    opp_ships[prev_shot.y][prev_shot.x] |= CELL_SHOOTED;
+                    PlaySound(msg);
+                    break;
+                case 'win':
+                case 'loss':
+                    state = S_GAME_OVER;
+                    win = msg === 'win';
+                    break;
+                default:
+                    var split = msg.split(' ');
+                    var x = parseInt(split[1]);
+                    var y = parseInt(split[2]);
+                    player_ships[y][x] |= CELL_SHOOTED;
+                    if (split[0] === ('hit_on')) {
+                        prev_event = 'OPPONENT HIT ON ' + x + ' ' + y;
+                        //TODO: play hit sound
+                    } else if (split[0] === 'miss_on') {
+                        prev_event = 'OPPONENT MISSED ON ' + x + ' ' + y;
+                        //TODO: play miss sound
+                    } else {
+                        prev_event = 'OPPONENT SUNK YOUR SHIP';
+                        //TODO: play sunk sound
+                    }
+                    break;
         }
-    } else if (state === S_SHIPS_ARRANGEMENT) {
-        if (msg === 'opp_leaved') state = S_OPP_LEAVED;
-    } else if (state === S_WAITING_OPPONENT) {
-        if (msg === 'opp_leaved') state = S_OPP_LEAVED;
-        else if (msg.startsWith('start')) {
-            state = S_BATTLE;
-            player_turns = msg.endsWith('+');
-        }
-    } else if (state === S_BATTLE) {
-        if (msg === 'opp_leaved') state = S_OPP_LEAVED;
-        else if (msg === 'hit') opp_ships[prev_shot.y][prev_shot.x] = CELL_SHIP | CELL_SHOOTED;
-        else if (msg === 'miss') opp_ships[prev_shot.y][prev_shot.x] = CELL_NONE | CELL_SHOOTED;
-        else if (msg === 'win' || msg === 'loss') {
-            state = S_GAME_OVER;
-            win = msg === 'win';
-        } else { //hit_on or miss_on event
-            var split = msg.split(' ');
-            var x = parseInt(split[1]);
-            var y = parseInt(split[2]);
-            player_ships[y][x] = player_ships[y][x] | CELL_SHOOTED;
-        }
+            break;
     }
 }
+
 
 setInterval(Update, 1000 / 60);
