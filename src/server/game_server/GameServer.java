@@ -1,6 +1,7 @@
 package server.game_server;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,6 +72,7 @@ public class GameServer extends WebSocketServer {
                     for (int x = 0; x < 10; x++) 
                         ships[y][x] = line.charAt(x) == '1' ? Player.CELL_SHIP : Player.CELL_NONE;
                 }
+                Arrays.deepToString(ships);
                 if (p.opp.ready) {
                     p.turns = Math.random() < 0.5;
                     p.opp.turns = !p.turns;
@@ -160,13 +162,34 @@ public class GameServer extends WebSocketServer {
     }
     
     private static boolean sunk(int x, int y, int[][] ships) {
-        if ((ships[y][x] & Player.CELL_NONE) != 0) return true;
-        if ((ships[y][x] & Player.CELL_SHOOTED) == 0) return false;
         
-        if (x - 1 >= 0 && !sunk(x - 1, y, ships)) return false;
-        if (x + 1 <= 10 && !sunk(x + 1, y, ships)) return false;
-        if (y - 1 >= 0 && !sunk(x, y - 1, ships)) return false;
-        if (y + 1 <= 10 && !sunk(x, y + 1, ships)) return false;
+        for (int i = x - 1; i >= 0; i--) {
+            if ((ships[y][i] & Player.CELL_NONE) != 0) break;
+            else {
+                if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
+            }
+        }
+        
+        for (int i = x + 1; i <= 9; i++) {
+            if ((ships[y][i] & Player.CELL_NONE) != 0) break;
+            else {
+                if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
+            }
+        }
+        
+        for (int i = y - 1; i >= 0; i--) {
+            if ((ships[i][x] & Player.CELL_NONE) != 0) break;
+            else {
+                if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
+            }
+        }
+        
+        for (int i = y + 1; i <= 9; i++) {
+            if ((ships[i][x] & Player.CELL_NONE) != 0) break;
+            else {
+                if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
+            }
+        }
         
         return true;
         

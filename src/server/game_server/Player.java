@@ -19,6 +19,8 @@ public class Player {
     public final WebSocket socket;
     public int state = S_NONE;
     
+    public String name;
+    
     public Player opp;
     
     public int[][] ships;
