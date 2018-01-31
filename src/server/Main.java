@@ -17,7 +17,7 @@ public class Main {
      */
     public static void main(String[] args) throws IOException {
         
-        GameSender gs = new GameSender(8082);
+        GameSender gs = new GameSender(8080);
         Thread t = new Thread(gs);
         t.start();
         

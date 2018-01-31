@@ -72,7 +72,6 @@ public class GameServer extends WebSocketServer {
                     for (int x = 0; x < 10; x++) 
                         ships[y][x] = line.charAt(x) == '1' ? Player.CELL_SHIP : Player.CELL_NONE;
                 }
-                Arrays.deepToString(ships);
                 if (p.opp.ready) {
                     p.turns = Math.random() < 0.5;
                     p.opp.turns = !p.turns;
@@ -157,38 +156,30 @@ public class GameServer extends WebSocketServer {
     }
 
     @Override
-    public void onStart() {
-        System.out.println("Game server starts...");
-    }
+    public void onStart() { 
+        System.out.println("Game server starts....");
+    } 
     
     private static boolean sunk(int x, int y, int[][] ships) {
         
         for (int i = x - 1; i >= 0; i--) {
             if ((ships[y][i] & Player.CELL_NONE) != 0) break;
-            else {
-                if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
-            }
+            if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
         }
         
         for (int i = x + 1; i <= 9; i++) {
             if ((ships[y][i] & Player.CELL_NONE) != 0) break;
-            else {
-                if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
-            }
+            if ((ships[y][i] & Player.CELL_SHOOTED) == 0) return false;
         }
         
         for (int i = y - 1; i >= 0; i--) {
             if ((ships[i][x] & Player.CELL_NONE) != 0) break;
-            else {
-                if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
-            }
+            if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
         }
         
         for (int i = y + 1; i <= 9; i++) {
             if ((ships[i][x] & Player.CELL_NONE) != 0) break;
-            else {
-                if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
-            }
+            if ((ships[i][x] & Player.CELL_SHOOTED) == 0) return false;
         }
         
         return true;

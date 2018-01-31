@@ -28,10 +28,13 @@ var CELL_NONE       = 1;
 var CELL_SHIP       = 2;
 var CELL_SHOOTED    = 4;
 
-var player_ships, opp_ships;
+var player_ships = new Array(12), opp_ships = new Array(10);
 
-var GRID_COORDS;
-var TEMP_SHIP;
+for (var i = 0; i < player_ships.length; i++) player_ships[i] = new Array(12);
+for (var i = 0; i < opp_ships.length; i++) opp_ships[i] = new Array(10);
+
+var GRID_COORDS = new Array(2); //GRID[0] - player ships, GRID[1] - opp ships
+var TEMP_SHIP = new Array(4);
 
 var GAME_NAME_X = CENTER_X, GAME_NAME_Y = CENTER_Y / 3;
 var game_name_y = 0;
@@ -62,6 +65,7 @@ var player_turn;
 var prev_shot;
 var aim;
 var prev_event;
+
 var win;
 
 function Update() {
@@ -441,23 +445,12 @@ function onmessage(event) {
     switch (state) {
         case S_SEARCHING_OPPONENT:
             if (msg === 'opp_found') {
-                TEMP_SHIP = new Array(4); 
-                for (var i = 0; i < TEMP_SHIP.length; i++) TEMP_SHIP[i] = {x: -1, y: -1};
-                GRID_COORDS = new Array(2); //GRID[0] - player ships, GRID[1] - opp ships
-                for (var i = 0; i < GRID_COORDS.length; i++) GRID_COORDS[i] = {x: -1, y: -1};
+                state = S_SHIPS_ARRANGEMENT;
+                for (var i = 0; i < TEMP_SHIP.length; i++) TEMP_SHIP[i].x = TEMP_SHIP[i].y = -1;
+                for (var i = 0; i < player_ships.length; i++) player_ships[i].fill(CELL_NONE);
+                for (var i = 0; i < opp_ships.length; i++) opp_ships[i].fill(CELL_NONE);
                 GRID_COORDS[0].x = CENTER_X - 5 * CELL_SIZE;
                 GRID_COORDS[0].y = CENTER_Y - 7.5 * CELL_SIZE;
-                player_ships = new Array(12);
-                opp_ships = new Array(10);
-                for (var i = 0; i < player_ships.length; i++) {
-                    player_ships[i] = new Array(12);
-                    player_ships[i].fill(CELL_NONE);
-                }
-                for (var i = 0; i < opp_ships.length; i++) {
-                    opp_ships[i] = new Array(10);
-                    opp_ships[i].fill(CELL_NONE);
-                }
-                state = S_SHIPS_ARRANGEMENT;
                 selected_ship = -1;
                 ships_remain[0] = 4;
                 ships_remain[1] = 3;
