@@ -33,8 +33,10 @@ var player_ships = new Array(12), opp_ships = new Array(10);
 for (var i = 0; i < player_ships.length; i++) player_ships[i] = new Array(12);
 for (var i = 0; i < opp_ships.length; i++) opp_ships[i] = new Array(10);
 
-var GRID_COORDS = new Array(2); //GRID[0] - player ships, GRID[1] - opp ships
+var GRID_COORDS = [{x: -1, y: -1}, {x: -1, y: -1}] //GRID[0] - player ships, GRID[1] - opp ships
 var TEMP_SHIP = new Array(4);
+
+for (var i = 0; i < TEMP_SHIP.length; i++) TEMP_SHIP[i] = {x: -1, y: -1};
 
 var GAME_NAME_X = CENTER_X, GAME_NAME_Y = CENTER_Y / 3;
 var game_name_y = 0;
@@ -270,7 +272,7 @@ function DrawAim(grid_coords, aim) {
     CTX.fillStyle = '#00ff00';
     CTX.font = CELL_SIZE + 'px ' + FONT_FAMILY;
     CTX.textAlign = 'center';
-    CTX.fillText('o', grid_coords.x + CELL_SIZE * ((aim.x + 1) - 1 / 2), grid_coords.y + CELL_SIZE * ((aim.y + 1) - 1 / 5));                
+    CTX.fillText('+', grid_coords.x + CELL_SIZE * ((aim.x + 1) - 1 / 2), grid_coords.y + CELL_SIZE * ((aim.y + 1) - 1 / 5));                
 }
 
 function DrawLine(x1, y1, x2, y2) {
