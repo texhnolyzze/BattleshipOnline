@@ -1,6 +1,8 @@
 package server.game_server;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -18,10 +20,14 @@ public class GameServer extends WebSocketServer {
     private final ReentrantLock waitingPlayerLock = new ReentrantLock();
     
 //  All connected players 
-    private final ConcurrentHashMap<WebSocket, Player> players = new ConcurrentHashMap<>();
+    private final Map<WebSocket, Player> players;
+    
+//                               ???????????
+    private static final boolean THREAD_SAFE = true; 
 
     public GameServer(InetSocketAddress address) {
-        super(address);
+        super(address, THREAD_SAFE ? Runtime.getRuntime().availableProcessors() : 1);
+        players = THREAD_SAFE ? new ConcurrentHashMap<>() : new HashMap<>();
     }
     
     @Override
@@ -45,16 +51,27 @@ public class GameServer extends WebSocketServer {
                             waitingPlayer = p;
                             waitingPlayer.state = Player.S_WAITING_FOR_OPP;
                         } else {
-                            Player opp = waitingPlayer;
-                            p.state = Player.S_IN_BATTLE;
-                            opp.state = Player.S_IN_BATTLE;
-                            p.opp = opp;
-                            opp.opp = p;
-                            p.socket.send("opp_found");
-                            opp.socket.send("opp_found");
-                            p.sharedLock = new ReentrantLock();
-                            p.opp.sharedLock = p.sharedLock;
-                            waitingPlayer = null;
+                            waitingPlayer.personalLock.lock();
+                            try {
+                                if (waitingPlayer.state != Player.S_INVALID) {
+                                    Player opp = waitingPlayer;
+                                    p.state = Player.S_IN_BATTLE;
+                                    opp.state = Player.S_IN_BATTLE;
+                                    p.opp = opp;
+                                    opp.opp = p;
+                                    p.socket.send("opp_found");
+                                    opp.socket.send("opp_found");
+                                    p.sharedLock = new ReentrantLock();
+                                    p.opp.sharedLock = p.sharedLock;
+                                    waitingPlayer = null;
+                                } else {
+                                    waitingPlayer.personalLock.unlock();
+                                    waitingPlayer = p;
+                                }
+                            } finally {
+                                if (waitingPlayer != p)
+                                    waitingPlayer.personalLock.unlock();
+                            }
                         }
                     } finally {
                         waitingPlayerLock.unlock();
@@ -143,9 +160,9 @@ public class GameServer extends WebSocketServer {
         Player p = players.get(ws);
         if (p != null) {
             p.personalLock.lock();
-            p.state = Player.S_INVALID;
             try {
                 players.remove(ws);
+                p.state = Player.S_INVALID;
                 if (p.opp != null) {
                     p.sharedLock.lock();
                     try {
